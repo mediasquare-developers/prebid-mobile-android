@@ -2,6 +2,8 @@ apply from: '../android.gradle'
 apply from: '../publisher.gradle'
 apply from: '../tests.gradle'
 
+apply plugin: 'kotlin-android'
+
 android {
     defaultConfig {
         minSdkVersion 19
@@ -11,4 +13,12 @@ android {
 dependencies {
     implementation project(":PrebidMobile")
     implementation 'com.google.android.gms:play-services-ads:+'
+
+    // Kotlin
+    implementation "androidx.core:core-ktx:1.10.1"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+}
+
+repositories {
+    mavenCentral()
 }

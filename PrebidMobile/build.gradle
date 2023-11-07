@@ -1,6 +1,16 @@
 apply from: 'android.gradle'
 apply from: 'publisher.gradle'
 
+apply plugin: 'kotlin-android'
+
 dependencies {
     api project(':PrebidMobile-core')
+
+    // Kotlin
+    implementation "androidx.core:core-ktx:1.10.1"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+}
+
+repositories {
+    mavenCentral()
 }
