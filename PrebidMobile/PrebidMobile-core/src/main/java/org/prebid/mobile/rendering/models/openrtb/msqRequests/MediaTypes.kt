@@ -12,6 +12,7 @@ MediaTypes: BaseBid() {
 
     var banner: Banner? = null
     var video: Video? = null
+    var native: Native? = null
 
     // MARK: - Methods
 
@@ -33,6 +34,15 @@ MediaTypes: BaseBid() {
                 it.getJsonObject()
             )
         }
+
+        native?.let {
+            toJSON(
+                jsonObject,
+                "native",
+                it.getJsonObject()
+            )
+        }
+
         return jsonObject
     }
 }

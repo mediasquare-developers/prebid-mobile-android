@@ -61,7 +61,7 @@ public class PrebidNativeAd {
     private String impEvent;
 
 
-    public static PrebidNativeAd create(String cacheId) {
+    public static PrebidNativeAd legacyCreate(String cacheId) {
         String content = CacheManager.get(cacheId);
         if (!TextUtils.isEmpty(content)) {
             try {
@@ -151,6 +151,98 @@ public class PrebidNativeAd {
                                     impUrl = impUrl.replace("{AUCTION_PRICE}", details.getString("price"));
                                 }
                                 ad.imp_trackers.add(impUrl);
+                            }
+                        }
+                    }
+                }
+                parseEvents(details, ad);
+                return ad;
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
+
+    public static PrebidNativeAd create(String cacheId) {
+        String content = CacheManager.get(cacheId);
+        if (!TextUtils.isEmpty(content)) {
+            try {
+                JSONObject details = new JSONObject(content);
+
+                JSONObject adObject = details.getJSONObject("native");
+
+                final PrebidNativeAd ad = new PrebidNativeAd();
+                CacheManager.registerCacheExpiryListener(cacheId, new CacheManager.CacheExpiryListener() {
+                    @Override
+                    public void onCacheExpired() {
+                        if (ad.registeredView == null) {
+                            if (ad.listener != null) {
+                                ad.listener.onAdExpired();
+                            }
+                            ad.expired = true;
+                            if (ad.visibilityDetector != null) {
+                                ad.visibilityDetector.destroy();
+                                ad.visibilityDetector = null;
+                            }
+                            ad.impressionTrackers = null;
+                            ad.listener = null;
+                        }
+                    }
+                });
+
+                if (adObject.has("title")) {
+                    String title = adObject.getString("title");
+
+                    if (!title.isEmpty()) {
+                        ad.addTitle(new NativeTitle(title));
+                    }
+                } else {
+                    LogUtil.warning(TAG, "Native object doesn't have title field");
+                }
+
+                if (adObject.has("body")) {
+                    String body = adObject.getString("body");
+
+                    if (!body.isEmpty()) {
+                        ad.addData(new NativeData(2, body));
+                    }
+                } else {
+                    LogUtil.warning(TAG, "Native object doesn't have body field");
+                }
+
+                //TODO: - TO BE DEFINED
+                if (adObject.has("icon")) {
+
+                }
+
+                //TODO: - TO BE DEFINED
+                if (adObject.has("image")) {
+
+                }
+
+
+                if (adObject.has("clickUrl")) {
+                    String link = adObject.getString("clickUrl");
+                    if (!link.isEmpty()) {
+                        if (link.contains("{AUCTION_PRICE}") && details.has("cpm")) {
+                            link = link.replace("{AUCTION_PRICE}", details.getString("cpm"));
+                        }
+                        ad.setClickUrl(link);
+                    }
+                }
+
+                if (adObject.has("impressionTrackers")) {
+                    JSONArray eventTrackers = adObject.getJSONArray("impressionTrackers");
+                    if (eventTrackers.length() > 0) {
+                        ad.imp_trackers = new ArrayList<>();
+                        for (int count = 0; count < eventTrackers.length(); count++) {
+                            String tracker = eventTrackers.getString(count);
+                            if (!tracker.isEmpty()) {
+                                if (tracker.contains("{AUCTION_PRICE}") && details.has("cpm")) {
+                                    tracker = tracker.replace("{AUCTION_PRICE}", details.getString("cpm"));
+                                }
+                                ad.imp_trackers.add(tracker);
                             }
                         }
                     }

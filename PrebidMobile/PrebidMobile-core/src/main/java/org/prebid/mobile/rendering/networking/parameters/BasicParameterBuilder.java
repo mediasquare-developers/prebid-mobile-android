@@ -135,6 +135,8 @@ public class BasicParameterBuilder extends ParameterBuilder {
                 setBannerCodeValues(code);
             } else if (adConfiguration.isAdType(AdFormat.VAST)) {
                 setVideoCodeValues(code);
+            } else if (adConfiguration.isAdType(AdFormat.NATIVE)) {
+                setNativeCodeValues(code);
             }
 
         }
@@ -182,8 +184,13 @@ public class BasicParameterBuilder extends ParameterBuilder {
         code.getMediaTypes().setVideo(video);
     }
 
+    private void setNativeCodeValues(Code code) {
+        Native nativeAd = new Native();
 
-        boolean isNotOriginalApi = !adConfiguration.isOriginalAdUnit();
+        //TODO: - create setRequestFrom() from adConfiguration.getNativeConfiguration() once tested
+
+        code.getMediaTypes().setNative(nativeAd);
+    }
 
     private void setCommonCodeValues(Code code, String uuid) {
         // TODO: - Extract values to a string value file ? Are those fixed or able to change ?
