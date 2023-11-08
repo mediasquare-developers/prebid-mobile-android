@@ -17,6 +17,7 @@
 package org.prebid.mobile.rendering.bidding.data.bid;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.prebid.mobile.rendering.models.openrtb.bidRequests.Ext;
 
@@ -77,6 +78,34 @@ public class Seatbid {
             }
         }
         seatbid.seat = jsonObject.optString("seat");
+        seatbid.group = jsonObject.optInt("group", -1);
+        seatbid.ext = new Ext();
+        if (jsonObject.has("ext")) {
+            seatbid.ext.put(jsonObject.optJSONObject("ext"));
+        }
+
+        return seatbid;
+    }
+
+    public static Seatbid fromMsqJSONObject(JSONObject jsonObject) {
+        Seatbid seatbid = new Seatbid();
+        if (jsonObject == null) {
+            return seatbid;
+        }
+
+        Bid bid = null;
+
+        try {
+            bid = Bid.fromMsqJSONObject(jsonObject);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        if (bid != null) {
+            seatbid.bids.add(bid);
+        }
+
+        seatbid.seat = jsonObject.optString("bidder");
         seatbid.group = jsonObject.optInt("group", -1);
         seatbid.ext = new Ext();
         if (jsonObject.has("ext")) {

@@ -18,6 +18,8 @@ package org.prebid.mobile.rendering.networking.parameters;
 
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.rendering.models.openrtb.BidRequest;
+import org.prebid.mobile.rendering.models.openrtb.MsqRequest;
+import org.prebid.mobile.rendering.models.openrtb.msqRequests.MediaTypes;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -29,9 +31,11 @@ public class AdRequestInput {
     private static final String TAG = AdRequestInput.class.getSimpleName();
 
     private BidRequest bidRequest;
+    private MsqRequest msqRequest;
 
     public AdRequestInput() {
-        bidRequest = new BidRequest();
+        //bidRequest = new BidRequest();
+        msqRequest = new MsqRequest();
     }
 
     public AdRequestInput getDeepCopy() {
@@ -40,13 +44,13 @@ public class AdRequestInput {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ObjectOutputStream oos = new ObjectOutputStream(baos);
-            oos.writeObject(bidRequest);
+            oos.writeObject(msqRequest);
             ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
             ObjectInputStream ois = new ObjectInputStream(bais);
-            newAdRequestInput.bidRequest = (BidRequest) ois.readObject();
+            newAdRequestInput.msqRequest = (MsqRequest) ois.readObject();
         }
         catch (Exception e) {
-            LogUtil.error(TAG, "Failed to make deep copy of bid request");
+            LogUtil.error(TAG, "Failed to make deep copy of MSQ request");
             return null;
         }
 
@@ -59,5 +63,13 @@ public class AdRequestInput {
 
     public void setBidRequest(BidRequest bidRequest) {
         this.bidRequest = bidRequest;
+    }
+
+    public MsqRequest getMsqRequest() {
+        return msqRequest;
+    }
+
+    public void setMsqRequest(MsqRequest msqRequest) {
+        this.msqRequest = msqRequest;
     }
 }

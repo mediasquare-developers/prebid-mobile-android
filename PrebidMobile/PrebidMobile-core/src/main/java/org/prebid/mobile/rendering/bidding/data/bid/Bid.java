@@ -22,6 +22,7 @@ import android.util.Base64;
 import androidx.annotation.Nullable;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.prebid.mobile.api.data.BidInfo;
 import org.prebid.mobile.rendering.models.internal.MacrosModel;
@@ -303,6 +304,87 @@ public class Bid {
             bid.prebid = prebidObject;
             bid.mobileSdkPassThrough = MobileSdkPassThrough.create(ext);
         }
+
+        substituteMacros(bid);
+
+        return bid;
+    }
+
+    public static Bid fromMsqJSONObject(JSONObject jsonObject) throws JSONException {
+        Bid bid = new Bid();
+
+        if (jsonObject == null) {
+            return bid;
+        }
+
+        bid.jsonString = jsonObject.toString();
+        bid.id = jsonObject.optString("code", null);
+        bid.impId = jsonObject.optString("impid", null);
+        bid.price = jsonObject.optDouble("cpm", 0);
+        bid.adm = jsonObject.optString("ad", null);
+
+        //handling VAST case
+        JSONObject video = jsonObject.optJSONObject("video");
+        if (video != null) {
+            bid.adm = video.optString("xml", null);
+        }
+
+        //handling NATIVE case
+        JSONObject nativeResponse = jsonObject.optJSONObject("native");
+        if (nativeResponse != null) {
+            bid.adm = nativeResponse.toString();
+        }
+
+        bid.crid = jsonObject.optString("creative_id", null);
+        bid.width = jsonObject.optInt("width");
+        bid.height = jsonObject.optInt("height");
+
+        bid.nurl = jsonObject.optString("nurl", null);
+        bid.burl = jsonObject.optString("burl", null);
+        bid.lurl = jsonObject.optString("lurl", null);
+        bid.adid = jsonObject.optString("adid", null);
+        bid.adomain = getStringArrayFromJson(jsonObject, "adomain");
+        bid.bundle = jsonObject.optString("bundle", null);
+        bid.iurl = jsonObject.optString("iurl", null);
+        bid.cid = jsonObject.optString("cid", null);
+        bid.tactic = jsonObject.optString("tactic", null);
+        bid.cat = getStringArrayFromJson(jsonObject, "cat");
+        bid.attr = getIntArrayFromJson(jsonObject, "attr");
+        bid.api = jsonObject.optInt("api", -1);
+        bid.protocol = jsonObject.optInt("protocol", -1);
+        bid.qagmediarating = jsonObject.optInt("qagmediarating", -1);
+        bid.language = jsonObject.optString("language", null);
+        bid.dealId = jsonObject.optString("dealid", null);
+        bid.WRatio = jsonObject.optInt("wratio");
+        bid.HRatio = jsonObject.optInt("hratio");
+        bid.exp = jsonObject.optInt("exp", -1);
+
+        // TODO: - Check in details how this block does operate
+        // From here ------------------------------------------------------------------------------
+        JSONObject headerBidding = new JSONObject();
+        headerBidding.put("hb_pb", bid.price);
+        headerBidding.put("hb_bidder", jsonObject.optString("bidder", null));
+        if (bid.width > 0 && bid.height > 0) {
+            headerBidding.put("hb_size", String.format("%dx%d", bid.width, bid.height));
+        }
+
+        if (nativeResponse != null) {
+            //not sure about that
+            headerBidding.put("hb_cache_id", bid.crid);
+            if (headerBidding.optString("hb_size").isEmpty()) {
+                headerBidding.put("hb_size", "300x250");
+            }
+        }
+
+        JSONObject targeting = new JSONObject();
+        targeting.putOpt("targeting", headerBidding);
+
+        JSONObject prebid = new JSONObject();
+        prebid.putOpt("prebid", targeting);
+
+        bid.prebid = Prebid.fromJSONObject(prebid.optJSONObject("prebid"));
+        bid.mobileSdkPassThrough = MobileSdkPassThrough.create(prebid);
+        // To here --------------------------------------------------------------------------------
 
         substituteMacros(bid);
 

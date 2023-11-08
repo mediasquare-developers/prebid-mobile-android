@@ -27,6 +27,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.PrebidMobile;
+import org.prebid.mobile.api.data.FetchDemandResult;
 import org.prebid.mobile.configuration.AdUnitConfiguration;
 import org.prebid.mobile.rendering.models.openrtb.bidRequests.Ext;
 import org.prebid.mobile.rendering.models.openrtb.bidRequests.MobileSdkPassThrough;
@@ -36,6 +37,7 @@ import org.prebid.mobile.rendering.utils.helpers.Utils;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 
 public class BidResponse {
     private final static String TAG = BidResponse.class.getSimpleName();
@@ -132,43 +134,87 @@ public class BidResponse {
 
         try {
             JSONObject responseJson = new JSONObject(json);
-            id = responseJson.optString("id");
-            cur = responseJson.optString("cur");
-            bidId = responseJson.optString("bidid");
-            customData = responseJson.optString("customdata");
-            nbr = responseJson.optInt("nbr", -1);
-
-            MobileSdkPassThrough rootMobilePassThrough = null;
-            if (responseJson.has("ext")) {
-                ext = new Ext();
-                JSONObject extJsonObject = responseJson.optJSONObject("ext");
-                ext.put(extJsonObject);
-                if (extJsonObject != null) {
-                    rootMobilePassThrough = MobileSdkPassThrough.create(extJsonObject);
-                }
+            if (responseJson.optJSONArray("seatbid") != null) {
+                parseStandardResponse(responseJson);
+            } else if (responseJson.optJSONArray("responses") != null) {
+                parseMsqResponse(responseJson);
             }
 
-            JSONArray jsonSeatbids = responseJson.optJSONArray("seatbid");
-            if (jsonSeatbids != null) {
-                for (int i = 0; i < jsonSeatbids.length(); i++) {
-                    Seatbid seatbid = Seatbid.fromJSONObject(jsonSeatbids.optJSONObject(i));
-                    seatbids.add(seatbid);
-                }
-            }
-
-            MobileSdkPassThrough bidMobilePassThrough = null;
-            Bid winningBid = getWinningBid();
-            if (winningBid != null) {
-                bidMobilePassThrough = winningBid.getMobileSdkPassThrough();
-            }
-
-            mobileSdkPassThrough = MobileSdkPassThrough.combine(bidMobilePassThrough, rootMobilePassThrough);
             creationTime = System.currentTimeMillis();
         }
         catch (JSONException e) {
             hasParseError = true;
             parseError = "Failed to parse JSON String: " + e.getMessage();
             LogUtil.error(TAG, parseError);
+        }
+    }
+
+    private void parseStandardResponse(JSONObject responseJson) throws JSONException {
+
+        id = responseJson.optString("id");
+        cur = responseJson.optString("cur");
+        bidId = responseJson.optString("bidid");
+        customData = responseJson.optString("customdata");
+        nbr = responseJson.optInt("nbr", -1);
+
+        MobileSdkPassThrough rootMobilePassThrough = null;
+        if (responseJson.has("ext")) {
+            ext = new Ext();
+            JSONObject extJsonObject = responseJson.optJSONObject("ext");
+            ext.put(extJsonObject);
+            if (extJsonObject != null) {
+                rootMobilePassThrough = MobileSdkPassThrough.create(extJsonObject);
+            }
+        }
+
+        JSONArray jsonSeatbids = responseJson.optJSONArray("seatbid");
+        if (jsonSeatbids != null) {
+            for (int i = 0; i < jsonSeatbids.length(); i++) {
+                Seatbid seatbid = Seatbid.fromJSONObject(jsonSeatbids.optJSONObject(i));
+                seatbids.add(seatbid);
+            }
+        }
+
+        MobileSdkPassThrough bidMobilePassThrough = null;
+        Bid winningBid = getWinningBid();
+        if (winningBid == null) {
+            hasParseError = true;
+            parseError = FetchDemandResult.NO_BIDS_MESSAGE;
+            LogUtil.info(TAG, parseError);
+        } else {
+            bidMobilePassThrough = winningBid.getMobileSdkPassThrough();
+        }
+
+        mobileSdkPassThrough = MobileSdkPassThrough.combine(bidMobilePassThrough, rootMobilePassThrough);
+    }
+
+    private void parseMsqResponse(JSONObject responseJson) {
+        JSONArray bids = responseJson.optJSONArray("responses");
+
+        if (bids != null && bids.length() > 0) {
+
+            JSONObject firstBid = bids.optJSONObject(0);
+
+            id = firstBid.optString("code");
+            cur = firstBid.optString("currency");
+            bidId = firstBid.optString("bid_id");
+
+            customData = responseJson.optString("customdata");
+            nbr = responseJson.optInt("nbr", -1);
+
+            for (int i = 0; i < bids.length(); i++) {
+                Seatbid seatbid = Seatbid.fromMsqJSONObject(bids.optJSONObject(i));
+                seatbids.add(seatbid);
+            }
+        }
+
+        Bid winningBid = getWinningBid();
+        if (winningBid == null) {
+            hasParseError = true;
+            parseError = "Failed to parse bids. No winning bids were found.";
+            LogUtil.info(TAG, parseError);
+        } else {
+            mobileSdkPassThrough = winningBid.getMobileSdkPassThrough();
         }
     }
 

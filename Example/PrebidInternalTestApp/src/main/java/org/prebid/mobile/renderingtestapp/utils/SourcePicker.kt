@@ -22,8 +22,8 @@ import org.prebid.mobile.PrebidMobile
 object SourcePicker {
 
 
-    const val PBS_SERVER_DOMAIN = "https://prebid-server-test-j.prebid.org/openrtb2/auction"
-    private const val PROD_ACCOUNT_ID = "0689a263-318d-448b-a3d4-b02e8a709d9d"
+    const val PBS_SERVER_DOMAIN = "https://pbs-front.mediasquare.fr/msq_prebid"
+    private const val PROD_ACCOUNT_ID = "test"
 
     private const val QA_SERVER_DOMAIN = "https://prebid.qa.openx.net/openrtb2/auction"
     private const val QA_ACCOUNT_ID = "08efa38c-b6b4-48c4-adc0-bcb791caa791"

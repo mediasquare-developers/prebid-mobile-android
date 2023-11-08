@@ -31,9 +31,9 @@ public class BidUrlComponents extends URLComponents {
     public String getQueryArgString() {
         String openrtb = "";
         try {
-            JSONObject bidRequestJson = adRequestInput.getBidRequest().getJsonObject();
-            if (bidRequestJson.length() > 0) {
-                openrtb = bidRequestJson.toString();
+            JSONObject msqRequestJson = adRequestInput.getMsqRequest().getJsonObject();
+            if (msqRequestJson.length() > 0) {
+                openrtb = msqRequestJson.toString();
             }
         }
         catch (Exception e) {

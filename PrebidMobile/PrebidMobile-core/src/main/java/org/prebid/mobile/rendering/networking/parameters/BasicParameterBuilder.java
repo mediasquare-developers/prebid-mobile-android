@@ -41,9 +41,14 @@ import org.prebid.mobile.rendering.models.openrtb.BidRequest;
 import org.prebid.mobile.rendering.models.openrtb.bidRequests.Imp;
 import org.prebid.mobile.rendering.models.openrtb.bidRequests.User;
 import org.prebid.mobile.rendering.models.openrtb.bidRequests.devices.Geo;
-import org.prebid.mobile.rendering.models.openrtb.bidRequests.imps.Banner;
 import org.prebid.mobile.rendering.models.openrtb.bidRequests.imps.Video;
 import org.prebid.mobile.rendering.models.openrtb.bidRequests.source.Source;
+
+import org.prebid.mobile.rendering.models.openrtb.MsqRequest;
+import org.prebid.mobile.rendering.models.openrtb.msqRequests.Code;
+import org.prebid.mobile.rendering.models.openrtb.msqRequests.Native;
+import org.prebid.mobile.rendering.models.openrtb.msqRequests.codes.Banner;
+
 import org.prebid.mobile.rendering.session.manager.OmAdSessionManager;
 import org.prebid.mobile.rendering.utils.helpers.Utils;
 
@@ -107,62 +112,89 @@ public class BasicParameterBuilder extends ParameterBuilder {
     public void appendBuilderParameters(AdRequestInput adRequestInput) {
         final String uuid = UUID.randomUUID().toString();
 
-        configureBidRequest(adRequestInput.getBidRequest(), uuid);
-        configureSource(adRequestInput.getBidRequest().getSource(), uuid);
-        appendUserTargetingParameters(adRequestInput);
+        configureMsqRequest(adRequestInput.getMsqRequest(), uuid);
 
-        ArrayList<Imp> impsArrayList = adRequestInput.getBidRequest().getImp();
-        if (impsArrayList != null) {
-            Imp newImp = new Imp();
-            configureImpObject(newImp, uuid);
-            impsArrayList.add(newImp);
-        }
+        ArrayList<Code> codesArrayList = adRequestInput.getMsqRequest().getCodes();
+
+        Code newCode = new Code();
+        configureCodeObject(newCode, uuid);
+
+        codesArrayList.add(newCode);
     }
 
-    private void configureImpObject(Imp imp, String uuid) {
+    private void configureCodeObject(Code code, String uuid) {
+        code.setTransactionId(uuid);
+
         if (adConfiguration != null) {
-            setDisplayManager(imp);
-            setCommonImpValues(imp, uuid);
-            if (adConfiguration.getNativeConfiguration() != null) {
-                setNativeImpValues(imp);
+            code.setCode(adConfiguration.getConfigId());
+
+            setCommonCodeValues(code, uuid);
+
+            if (adConfiguration.isAdType(AdFormat.BANNER)
+                    || adConfiguration.isAdType(AdFormat.INTERSTITIAL)) {
+                setBannerCodeValues(code);
             }
-            if (adConfiguration.isAdType(AdFormat.BANNER) || adConfiguration.isAdType(AdFormat.INTERSTITIAL)) {
-                setBannerImpValues(imp);
-            }
-            if (adConfiguration.isAdType(AdFormat.VAST)) {
-                setVideoImpValues(imp);
-            }
+
         }
     }
 
-    private void configureBidRequest(BidRequest bidRequest, String uuid) {
-        bidRequest.setId(uuid);
-        boolean isVideo = adConfiguration.isAdType(AdFormat.VAST);
-        bidRequest.getExt().put("prebid", Prebid.getJsonObjectForBidRequest(PrebidMobile.getPrebidServerAccountId(), isVideo, adConfiguration));
-        //if coppaEnabled - set 1, else No coppa is sent
-        if (PrebidMobile.isCoppaEnabled) {
-            bidRequest.getRegs().coppa = 1;
+    private void configureMsqRequest(MsqRequest msqRequest, String uuid) {
+        // TODO: - Extract values to a string value file ?
+        msqRequest.setReferer("https%3A%2F%2Fdebug.mediasquare.fr%2Fdebug%2Fprebid%2Fmsq_desktop.html%3Fpbjs_debug%3Dtrue");
+        msqRequest.setPbjs("7.17.0");
+    }
+
+    private void setBannerCodeValues(Code code) {
+        Banner banner = new Banner();
+
+        if (adConfiguration.isAdType(AdFormat.BANNER)) {
+            for (AdSize size : adConfiguration.getSizes()) {
+                banner.getSizes().add(size);
+            }
+        } else if (adConfiguration.isAdType(AdFormat.INTERSTITIAL)) {
+            // TODO: - Unique size for testing phase
+            banner.getSizes().add(new AdSize(320, 480));
+        }
+
+        if (adConfiguration.isAdPositionValid()) {
+            banner.setPosition(adConfiguration.getAdPositionValue());
+        }
+
+        code.getMediaTypes().setBanner(banner);
+    }
+
         }
     }
 
-    private void configureSource(Source source, String uuid) {
-        source.setTid(uuid);
 
         boolean isNotOriginalApi = !adConfiguration.isOriginalAdUnit();
 
+    private void setCommonCodeValues(Code code, String uuid) {
+        // TODO: - Extract values to a string value file ? Are those fixed or able to change ?
+        code.setOwner("test");
+        code.setCode("publishername_atf_desktop_rg_pave");
+
+        code.setInterstitial(adConfiguration.isAdType(AdFormat.VAST)
+                || adConfiguration.isAdType(AdFormat.INTERSTITIAL));
+    }
+
+
+    private void configureSource(Source source, String uuid) {
         String userDefinedPartnerName = TargetingParams.getOmidPartnerName();
+        String userDefinedPartnerVersion = TargetingParams.getOmidPartnerVersion();
+        String usedPartnerName = OmAdSessionManager.PARTNER_NAME;
+        String usedPartnerVersion = OmAdSessionManager.PARTNER_VERSION;
+
         if (userDefinedPartnerName != null && !userDefinedPartnerName.isEmpty()) {
-            source.getExt().put(KEY_OM_PARTNER_NAME, userDefinedPartnerName);
-        } else if (isNotOriginalApi) {
-            source.getExt().put(KEY_OM_PARTNER_NAME, OmAdSessionManager.PARTNER_NAME);
+            usedPartnerName = userDefinedPartnerName;
+        }
+        if (userDefinedPartnerVersion != null && !userDefinedPartnerVersion.isEmpty()) {
+            usedPartnerVersion = userDefinedPartnerVersion;
         }
 
-        String userDefinedPartnerVersion = TargetingParams.getOmidPartnerVersion();
-        if (userDefinedPartnerVersion != null && !userDefinedPartnerVersion.isEmpty()) {
-            source.getExt().put(KEY_OM_PARTNER_VERSION, userDefinedPartnerVersion);
-        } else if (isNotOriginalApi) {
-            source.getExt().put(KEY_OM_PARTNER_VERSION, OmAdSessionManager.PARTNER_VERSION);
-        }
+        source.setTid(uuid);
+        source.getExt().put(KEY_OM_PARTNER_NAME, usedPartnerName);
+        source.getExt().put(KEY_OM_PARTNER_VERSION, usedPartnerVersion);
     }
 
     private void appendUserTargetingParameters(AdRequestInput adRequestInput) {
@@ -214,199 +246,9 @@ public class BasicParameterBuilder extends ParameterBuilder {
         }
     }
 
-    private void setVideoImpValues(Imp imp) {
-        Video video = new Video();
-        if (adConfiguration.isOriginalAdUnit()) {
-            VideoParameters videoParameters = adConfiguration.getVideoParameters();
-            if (videoParameters != null) {
-                video.minduration = videoParameters.getMinDuration();
-                video.maxduration = videoParameters.getMaxDuration();
-
-                video.minbitrate = videoParameters.getMinBitrate();
-                video.maxbitrate = videoParameters.getMaxBitrate();
-                video.linearity = videoParameters.getLinearity();
-                if (videoParameters.getPlacement() != null) {
-                    video.placement = videoParameters.getPlacement().getValue();
-                } else if (adConfiguration.isPlacementTypeValid()){
-                    video.placement = adConfiguration.getPlacementTypeValue();
-                }
-
-                if (videoParameters.getStartDelay() != null) {
-                    video.startDelay = videoParameters.getStartDelay().getValue();
-                }
-
-                List<Signals.PlaybackMethod> playbackObjects = videoParameters.getPlaybackMethod();
-                if (playbackObjects != null) {
-                    int size = playbackObjects.size();
-                    int[] playbackMethods = new int[size];
-
-                    for (int i = 0; i < size; i++) {
-                        playbackMethods[i] = playbackObjects.get(i).getValue();
-                    }
-
-                    video.playbackmethod = playbackMethods;
-                }
-
-                List<Signals.Api> apiObjects = videoParameters.getApi();
-                if (apiObjects != null && apiObjects.size() > 0) {
-                    int size = apiObjects.size();
-                    int[] apiArray = new int[size];
-                    for (int i = 0; i < size; i++) {
-                        apiArray[i] = apiObjects.get(i).getValue();
-                    }
-                    video.api = apiArray;
-                }
-
-                List<String> mimesObjects = videoParameters.getMimes();
-                if (mimesObjects != null && mimesObjects.size() > 0) {
-                    int size = mimesObjects.size();
-                    String[] mimesArray = new String[size];
-                    for (int i = 0; i < size; i++) {
-                        mimesArray[i] = mimesObjects.get(i);
-                    }
-                    video.mimes = mimesArray;
-                }
-
-                List<Signals.Protocols> protocolsObjects = videoParameters.getProtocols();
-                if (protocolsObjects != null && protocolsObjects.size() > 0) {
-                    int size = protocolsObjects.size();
-                    int[] protocolsArray = new int[size];
-                    for (int i = 0; i < size; i++) {
-                        protocolsArray[i] = protocolsObjects.get(i).getValue();
-                    }
-                    video.protocols = protocolsArray;
-                }
-            }
-            if (video.placement == null && adConfiguration.isPlacementTypeValid()) {
-                video.placement = adConfiguration.getPlacementTypeValue();
-            }
-        } else {
-            //Common values for all video reqs
-            video.mimes = SUPPORTED_VIDEO_MIME_TYPES;
-            video.protocols = SUPPORTED_VIDEO_PROTOCOLS;
-            video.linearity = VIDEO_LINEARITY_LINEAR;
-
-            //Interstitial video specific values
-            video.playbackend = VIDEO_INTERSTITIAL_PLAYBACK_END;//On Leaving Viewport or when Terminated by User
-
-            if (adConfiguration.isAdPositionValid()) {
-                video.pos = adConfiguration.getAdPositionValue();
-            }
-
-            if (!adConfiguration.isPlacementTypeValid()) {
-                video.placement = PlacementType.INTERSTITIAL.getValue();
-            } else {
-                video.placement = adConfiguration.getPlacementTypeValue();
-            }
-        }
-
-        VideoParameters videoParams = adConfiguration.getVideoParameters();
-        if (videoParams != null) {
-            AdSize adSize = videoParams.getAdSize();
-            if (adSize != null) {
-                video.w = adSize.getWidth();
-                video.h = adSize.getHeight();
-            }
-        } else if (!adConfiguration.getSizes().isEmpty()) {
-            for (AdSize size : adConfiguration.getSizes()) {
-                video.w = size.getWidth();
-                video.h = size.getHeight();
-                break;
-            }
-        } else if (resources != null) {
-            Configuration deviceConfiguration = resources.getConfiguration();
-            video.w = deviceConfiguration.screenWidthDp;
-            video.h = deviceConfiguration.screenHeightDp;
-        }
-        video.delivery = new int[]{VIDEO_DELIVERY_DOWNLOAD};
-
-        imp.video = video;
-    }
-
-    private void setBannerImpValues(Imp imp) {
-        Banner banner = new Banner();
-        if (adConfiguration.isOriginalAdUnit()) {
-            BannerParameters parameters = adConfiguration.getBannerParameters();
-            if (parameters != null && parameters.getApi() != null && parameters.getApi().size() > 0) {
-                List<Signals.Api> apiObjects = parameters.getApi();
-                int[] api = new int[apiObjects.size()];
-                for (int i = 0; i < apiObjects.size(); i++) {
-                    api[i] = apiObjects.get(i).getValue();
-                }
-                banner.api = api;
-            }
-        } else {
-            banner.api = getApiFrameworks();
-        }
-
-        BannerParameters bannerParameters = adConfiguration.getBannerParameters();
-        if (bannerParameters != null) {
-            Set<AdSize> adSizes = bannerParameters.getAdSizes();
-            if (adSizes != null) {
-                for (AdSize size : adSizes) {
-                    banner.addFormat(size.getWidth(), size.getHeight());
-                }
-            }
-        } else if (adConfiguration.isAdType(AdFormat.BANNER)) {
-            for (AdSize size : adConfiguration.getSizes()) {
-                banner.addFormat(size.getWidth(), size.getHeight());
-            }
-        } else if (adConfiguration.isAdType(AdFormat.INTERSTITIAL) && resources != null) {
-            Configuration deviceConfiguration = resources.getConfiguration();
-            banner.addFormat(deviceConfiguration.screenWidthDp, deviceConfiguration.screenHeightDp);
-        }
-
-        if (adConfiguration.isAdPositionValid()) {
-            banner.pos = adConfiguration.getAdPositionValue();
-        }
-
-        imp.banner = banner;
-    }
-
-    private void setNativeImpValues(Imp imp) {
-        if (adConfiguration.getNativeConfiguration() != null) {
-            imp.getNative().setRequestFrom(adConfiguration.getNativeConfiguration());
-        }
-    }
-
-    private void setCommonImpValues(Imp imp, String uuid) {
-        imp.id = uuid;
-        boolean isInterstitial = adConfiguration.isAdType(AdFormat.VAST) || adConfiguration.isAdType(AdFormat.INTERSTITIAL);
-        //Send 1 for interstitial/interstitial video and 0 for banners
-        imp.instl = isInterstitial ? 1 : 0;
-        // 0 == embedded, 1 == native
-        imp.clickBrowser = !PrebidMobile.useExternalBrowser && browserActivityAvailable ? 0 : 1;
-        //set secure=1 for https or secure=0 for http
-        if (!adConfiguration.isAdType(AdFormat.VAST)) {
-            imp.secure = 1;
-        }
-        imp.getExt().put("prebid", Prebid.getJsonObjectForImp(adConfiguration));
-
-        String gpid = adConfiguration.getGpid();
-        if (gpid != null) {
-            imp.getExt().put("gpid", gpid);
-        }
-
-        final Map<String, Set<String>> extDataDictionary = adConfiguration.getExtDataDictionary();
-        JSONObject data = Utils.toJson(extDataDictionary);
-        Utils.addValue(data, "adslot", adConfiguration.getPbAdSlot());
-        if (data.length() > 0) {
-            imp.getExt().put("data", data);
-        }
-
-        final Set<String> extKeywords = adConfiguration.getExtKeywordsSet();
-        if (extKeywords.size() > 0) {
-            String string = TextUtils.join(",", extKeywords);
-            imp.getExt().put("keywords", string);
-        }
-
-        // TODO: 15.12.2020 uncomment when Prebid server will be able to process Ext content not related to bidders
-        //imp.getExt().put(KEY_DEEPLINK_PLUS, 1);
-    }
-
     private void setDisplayManager(Imp imp) {
-        imp.displaymanager = adConfiguration.isOriginalAdUnit() ? null : DISPLAY_MANAGER_VALUE;
-        imp.displaymanagerver = adConfiguration.isOriginalAdUnit() ? null : SDK_VERSION;
+        imp.displaymanager = DISPLAY_MANAGER_VALUE;
+        imp.displaymanagerver = SDK_VERSION;
     }
 
     private int[] getApiFrameworks() {
@@ -432,8 +274,7 @@ public class BasicParameterBuilder extends ParameterBuilder {
             }
 
             return result;
-        }
-        else {
+        } else {
             return null;
         }
     }

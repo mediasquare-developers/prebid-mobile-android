@@ -32,6 +32,8 @@ public class StatusRequester implements Callable<String> {
             String url = PrebidMobile.getPrebidServerHost().getHostUrl();
             if (url.contains("/openrtb2/auction")) {
                 statusUrl = url.replace("/openrtb2/auction", "/status");
+            } else if (url.contains("mediasquare")) {
+                statusUrl = url;
             } else {
                 LogUtil.info("Prebid SDK can't build the /status endpoint. Please, provide the custom /status endpoint using PrebidMobile.setCustomStatusEndpoint().");
                 return null;

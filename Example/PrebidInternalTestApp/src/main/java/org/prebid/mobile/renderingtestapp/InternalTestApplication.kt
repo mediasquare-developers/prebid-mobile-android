@@ -42,7 +42,7 @@ class InternalTestApplication : MultiDexApplication() {
         super.onCreate()
         instance = this
 
-        PrebidMobile.setPrebidServerHost(Host.createCustomHost("https://prebid-server-test-j.prebid.org/openrtb2/auction"))
+        PrebidMobile.setPrebidServerHost(Host.createCustomHost("https://pbs-front.mediasquare.fr/msq_prebid"))
         PrebidMobile.initializeSdk(this, null)
         PrebidMobile.setPrebidServerAccountId(getString(R.string.prebid_account_id_prod))
         PrebidMobile.logLevel = PrebidMobile.LogLevel.DEBUG
