@@ -32,4 +32,9 @@ allprojects {
         maven { url 'https://jitpack.io' }
         maven { url "https://oss.sonatype.org/content/repositories/orgprebid-1079" }
     }
+
+    tasks.withType(Javadoc) {
+        failOnError false
+        exclude("**/*.kt")
+    }
 }

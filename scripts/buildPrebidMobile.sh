@@ -127,6 +127,10 @@ for n in ${!modules[@]}; do
     mkdir $AARPATH_ABSOLUTE/META-INF/proguard
     mv $AARPATH_ABSOLUTE/proguard.pro $AARPATH_ABSOLUTE/META-INF/proguard
     # move META-INF into a result direcotory
+    if [ "${modules[$n]}" == "PrebidMobile-core" ]; then
+      rm -r $TEMPDIR/output/META-INF/*
+    fi
+
     mv $AARPATH_ABSOLUTE/META-INF $TEMPDIR/output
 
     rm -r $TEMPDIR/output/META-INF/com
