@@ -11,6 +11,7 @@ MediaTypes: BaseBid() {
     // MARK: - Properties
 
     var banner: Banner? = null
+    var video: Video? = null
 
     // MARK: - Methods
 
@@ -21,6 +22,14 @@ MediaTypes: BaseBid() {
             toJSON(
                 jsonObject,
                 "banner",
+                it.getJsonObject()
+            )
+        }
+
+        video?.let {
+            toJSON(
+                jsonObject,
+                "video",
                 it.getJsonObject()
             )
         }

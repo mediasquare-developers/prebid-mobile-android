@@ -133,6 +133,8 @@ public class BasicParameterBuilder extends ParameterBuilder {
             if (adConfiguration.isAdType(AdFormat.BANNER)
                     || adConfiguration.isAdType(AdFormat.INTERSTITIAL)) {
                 setBannerCodeValues(code);
+            } else if (adConfiguration.isAdType(AdFormat.VAST)) {
+                setVideoCodeValues(code);
             }
 
         }
@@ -163,7 +165,21 @@ public class BasicParameterBuilder extends ParameterBuilder {
         code.getMediaTypes().setBanner(banner);
     }
 
+    private void setVideoCodeValues(Code code) {
+        org.prebid.mobile.rendering.models.openrtb.msqRequests.codes.Video video = new org.prebid.mobile.rendering.models.openrtb.msqRequests.codes.Video();
+
+        //Common values for all video reqs
+        video.setMimes(new ArrayList<>(Arrays.asList(SUPPORTED_VIDEO_MIME_TYPES)));
+
+        //Add a default player size
+        if (adConfiguration.getSizes().isEmpty()) {
+            adConfiguration.addSize(new AdSize(640, 480));
         }
+        for (AdSize size : adConfiguration.getSizes()) {
+            video.getPlayerSizes().add(size);
+        }
+
+        code.getMediaTypes().setVideo(video);
     }
 
 
